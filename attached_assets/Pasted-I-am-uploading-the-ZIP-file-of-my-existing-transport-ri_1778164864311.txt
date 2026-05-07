@@ -1,0 +1,99 @@
+I am uploading the ZIP file of my existing transport risk prediction project.
+
+Please first analyze the whole project carefully before making changes.
+
+========================
+PROJECT OVERVIEW
+========================
+
+This project is an intelligent transport safety web application connected to a Machine Learning model trained in a Jupyter Notebook.
+
+The application already works and includes many important features:
+- Tunisia interactive map
+- Departure and destination selection
+- Accident risk prediction using ML
+- Route segmentation
+- Real-time weather integration
+- Hour/time selection
+- Risk visualization
+- LLM AI safety recommendations
+- Backend connected to trained .pkl models
+
+The project already has a good structure and most functionalities work correctly.
+
+========================
+MAIN PROBLEM TO FIX
+========================
+
+The ONLY major issue is the route generation system.
+
+Currently, when the user selects departure and destination points, the application draws a simple straight line between them.
+
+This is incorrect because:
+- The route may cross the sea
+- It ignores actual roads
+- It may pass through buildings or inaccessible areas
+- It does not simulate a real driving path
+
+As a result:
+- Distance calculation becomes unrealistic
+- Segment prediction becomes inaccurate
+- The displayed route is not usable
+
+========================
+WHAT MUST BE DONE
+========================
+
+Replace ONLY the current routing logic.
+
+The route must:
+- Follow real Tunisian roads
+- Use an actual routing engine/API such as:
+  - OpenRouteService
+  - OSRM
+  - Leaflet Routing Machine
+  - or Mapbox Directions API
+
+The generated route should:
+- Stay strictly on drivable roads
+- Avoid sea, lakes, beaches, buildings, and restricted areas
+- Represent a realistic transport journey
+
+========================
+IMPORTANT FEATURES TO KEEP
+========================
+
+VERY IMPORTANT:
+Do NOT remove or break existing functionalities.
+
+Please KEEP:
+- Real-time weather integration
+- Hour/time selection
+- LLM AI recommendations
+- ML accident prediction system
+- Route segmentation logic
+- Risk visualization
+- Existing frontend UI
+- Existing backend architecture
+- Existing trained model integration
+
+========================
+IMPORTANT DEVELOPMENT INSTRUCTIONS
+========================
+
+- Do not redesign the entire application
+- Do not rebuild the project from scratch
+- Only fix and improve the routing/path system
+- Preserve compatibility with the existing codebase
+- Keep the current user experience and workflow
+
+========================
+FINAL OBJECTIVE
+========================
+
+The final application should:
+- Let the user choose departure and destination in Tunisia
+- Generate a REAL drivable road route
+- Segment the real route correctly
+- Predict accident risk accurately on each segment
+- Keep all advanced existing features working properly

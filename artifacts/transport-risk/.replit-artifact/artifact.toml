@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "Tunisia Transport Risk Mapper"
+version = "1.0.0"
+id = "artifacts/transport-risk"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21075
+
+[services.development]
+run = "pnpm --filter @workspace/transport-risk run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/transport-risk", "run", "build" ]
+publicDir = "artifacts/transport-risk/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21075"
+BASE_PATH = "/"

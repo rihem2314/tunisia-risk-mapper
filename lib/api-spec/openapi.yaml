@@ -10,6 +10,12 @@ servers:
 tags:
   - name: health
     description: Health operations
+  - name: prediction
+    description: ML risk prediction
+  - name: cities
+    description: Tunisian cities data
+  - name: weather
+    description: Real-time weather data
 paths:
   /healthz:
     get:
@@ -24,6 +30,108 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+
+  /cities:
+    get:
+      operationId: getCities
+      tags: [cities]
+      summary: Get list of Tunisian cities
+      description: Returns a list of major Tunisian cities with coordinates
+      responses:
+        "200":
+          description: List of cities
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CitiesResponse"
+
+  /weather:
+    get:
+      operationId: getWeather
+      tags: [weather]
+      summary: Get real-time weather at a location
+      description: Fetches current weather from Open-Meteo for given coordinates
+      parameters:
+        - name: lat
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Latitude
+        - name: lng
+          in: query
+          required: true
+          schema:
+            type: number
+            format: double
+          description: Longitude
+      responses:
+        "200":
+          description: Current weather information
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/WeatherInfo"
+        "400":
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /predict:
+    post:
+      operationId: predictRoute
+      tags: [prediction]
+      summary: Predict accident risk along a route
+      description: Divides a route into segments, auto-fetches real-time weather, and predicts accident risk for each segment
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PredictRouteInput"
+      responses:
+        "200":
+          description: Route risk prediction result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PredictRouteResult"
+        "400":
+          description: Invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Prediction error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /recommend:
+    post:
+      operationId: getRecommendations
+      tags: [prediction]
+      summary: Get AI safety recommendations for a route (SSE)
+      description: Streams AI-powered safety recommendations based on route risk analysis
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RecommendInput"
+      responses:
+        "200":
+          description: SSE stream of recommendation chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
 components:
   schemas:
     HealthStatus:
@@ -34,3 +142,244 @@ components:
       required:
         - status
 
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+      required:
+        - error
+
+    City:
+      type: object
+      properties:
+        name:
+          type: string
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+        governorate:
+          type: string
+      required:
+        - name
+        - lat
+        - lng
+        - governorate
+
+    CitiesResponse:
+      type: object
+      properties:
+        cities:
+          type: array
+          items:
+            $ref: "#/components/schemas/City"
+      required:
+        - cities
+
+    WeatherInfo:
+      type: object
+      properties:
+        condition:
+          type: string
+        temperatureCelsius:
+          type: number
+          format: double
+        humidity:
+          type: number
+          format: double
+        windSpeedKmh:
+          type: number
+          format: double
+        precipitationMm:
+          type: number
+          format: double
+        description:
+          type: string
+      required:
+        - condition
+        - temperatureCelsius
+        - humidity
+        - windSpeedKmh
+        - precipitationMm
+        - description
+
+    RouteWaypoint:
+      type: object
+      properties:
+        lat:
+          type: number
+          format: double
+        lng:
+          type: number
+          format: double
+      required:
+        - lat
+        - lng
+
+    PredictRouteInput:
+      type: object
+      properties:
+        startLat:
+          type: number
+          format: double
+        startLng:
+          type: number
+          format: double
+        endLat:
+          type: number
+          format: double
+        endLng:
+          type: number
+          format: double
+        totalDistanceKm:
+          type: number
+          format: double
+        stepKm:
+          type: number
+          format: double
+          default: 10
+        hour:
+          type: integer
+          minimum: 0
+          maximum: 23
+        hasJunction:
+          type: boolean
+          default: false
+        hasCrossing:
+          type: boolean
+          default: false
+        hasTrafficSignal:
+          type: boolean
+          default: false
+        hasRoundabout:
+          type: boolean
+          default: false
+        fromCity:
+          type: string
+        toCity:
+          type: string
+        routeWaypoints:
+          type: array
+          description: Actual road waypoints from routing engine for accurate segmentation
+          items:
+            $ref: "#/components/schemas/RouteWaypoint"
+      required:
+        - startLat
+        - startLng
+        - endLat
+        - endLng
+        - totalDistanceKm
+
+    RouteSegment:
+      type: object
+      properties:
+        segmentIndex:
+          type: integer
+        startLat:
+          type: number
+          format: double
+        startLng:
+          type: number
+          format: double
+        endLat:
+          type: number
+          format: double
+        endLng:
+          type: number
+          format: double
+        distanceKm:
+          type: number
+          format: double
+        riskLevel:
+          type: integer
+          minimum: 0
+          maximum: 3
+        riskLabel:
+          type: string
+        riskProbabilities:
+          type: array
+          items:
+            type: number
+            format: double
+        riskScore:
+          type: number
+          format: double
+      required:
+        - segmentIndex
+        - startLat
+        - startLng
+        - endLat
+        - endLng
+        - distanceKm
+        - riskLevel
+        - riskLabel
+        - riskProbabilities
+        - riskScore
+
+    PredictRouteResult:
+      type: object
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteSegment"
+        overallRiskScore:
+          type: number
+          format: double
+        overallRiskLevel:
+          type: integer
+        overallRiskLabel:
+          type: string
+        totalDistanceKm:
+          type: number
+          format: double
+        segmentCount:
+          type: integer
+        weatherCondition:
+          type: string
+        hour:
+          type: integer
+        weatherInfo:
+          $ref: "#/components/schemas/WeatherInfo"
+      required:
+        - segments
+        - overallRiskScore
+        - overallRiskLevel
+        - overallRiskLabel
+        - totalDistanceKm
+        - segmentCount
+        - weatherCondition
+        - hour
+
+    RecommendInput:
+      type: object
+      properties:
+        segments:
+          type: array
+          items:
+            $ref: "#/components/schemas/RouteSegment"
+        overallRiskScore:
+          type: number
+          format: double
+        overallRiskLabel:
+          type: string
+        weatherInfo:
+          $ref: "#/components/schemas/WeatherInfo"
+        totalDistanceKm:
+          type: number
+          format: double
+        hour:
+          type: integer
+        fromCity:
+          type: string
+        toCity:
+          type: string
+      required:
+        - segments
+        - overallRiskScore
+        - overallRiskLabel
+        - totalDistanceKm
+        - hour

@@ -6,4 +6,14 @@
  * OpenAPI spec version: 0.1.0
  */
 
+export * from "./citiesResponse";
+export * from "./city";
+export * from "./errorResponse";
+export * from "./getWeatherParams";
 export * from "./healthStatus";
+export * from "./predictRouteInput";
+export * from "./predictRouteResult";
+export * from "./recommendInput";
+export * from "./routeSegment";
+export * from "./routeWaypoint";
+export * from "./weatherInfo";

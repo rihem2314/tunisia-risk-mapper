@@ -14,3 +14,165 @@ import * as zod from "zod";
 export const HealthCheckResponse = zod.object({
   status: zod.string(),
 });
+
+/**
+ * Returns a list of major Tunisian cities with coordinates
+ * @summary Get list of Tunisian cities
+ */
+export const GetCitiesResponse = zod.object({
+  cities: zod.array(
+    zod.object({
+      name: zod.string(),
+      lat: zod.number(),
+      lng: zod.number(),
+      governorate: zod.string(),
+    }),
+  ),
+});
+
+/**
+ * Fetches current weather from Open-Meteo for given coordinates
+ * @summary Get real-time weather at a location
+ */
+export const GetWeatherQueryParams = zod.object({
+  lat: zod.coerce.number().describe("Latitude"),
+  lng: zod.coerce.number().describe("Longitude"),
+});
+
+export const GetWeatherResponse = zod.object({
+  condition: zod.string(),
+  temperatureCelsius: zod.number(),
+  humidity: zod.number(),
+  windSpeedKmh: zod.number(),
+  precipitationMm: zod.number(),
+  description: zod.string(),
+});
+
+/**
+ * Divides a route into segments, auto-fetches real-time weather, and predicts accident risk for each segment
+ * @summary Predict accident risk along a route
+ */
+export const predictRouteBodyStepKmDefault = 10;
+export const predictRouteBodyHourMin = 0;
+export const predictRouteBodyHourMax = 23;
+
+export const predictRouteBodyHasJunctionDefault = false;
+export const predictRouteBodyHasCrossingDefault = false;
+export const predictRouteBodyHasTrafficSignalDefault = false;
+export const predictRouteBodyHasRoundaboutDefault = false;
+
+export const PredictRouteBody = zod.object({
+  startLat: zod.number(),
+  startLng: zod.number(),
+  endLat: zod.number(),
+  endLng: zod.number(),
+  totalDistanceKm: zod.number(),
+  stepKm: zod.number().default(predictRouteBodyStepKmDefault),
+  hour: zod
+    .number()
+    .min(predictRouteBodyHourMin)
+    .max(predictRouteBodyHourMax)
+    .optional(),
+  hasJunction: zod.boolean().default(predictRouteBodyHasJunctionDefault),
+  hasCrossing: zod.boolean().default(predictRouteBodyHasCrossingDefault),
+  hasTrafficSignal: zod
+    .boolean()
+    .default(predictRouteBodyHasTrafficSignalDefault),
+  hasRoundabout: zod.boolean().default(predictRouteBodyHasRoundaboutDefault),
+  fromCity: zod.string().optional(),
+  toCity: zod.string().optional(),
+  routeWaypoints: zod
+    .array(
+      zod.object({
+        lat: zod.number(),
+        lng: zod.number(),
+      }),
+    )
+    .optional()
+    .describe(
+      "Actual road waypoints from routing engine for accurate segmentation",
+    ),
+});
+
+export const predictRouteResponseSegmentsItemRiskLevelMin = 0;
+export const predictRouteResponseSegmentsItemRiskLevelMax = 3;
+
+export const PredictRouteResponse = zod.object({
+  segments: zod.array(
+    zod.object({
+      segmentIndex: zod.number(),
+      startLat: zod.number(),
+      startLng: zod.number(),
+      endLat: zod.number(),
+      endLng: zod.number(),
+      distanceKm: zod.number(),
+      riskLevel: zod
+        .number()
+        .min(predictRouteResponseSegmentsItemRiskLevelMin)
+        .max(predictRouteResponseSegmentsItemRiskLevelMax),
+      riskLabel: zod.string(),
+      riskProbabilities: zod.array(zod.number()),
+      riskScore: zod.number(),
+    }),
+  ),
+  overallRiskScore: zod.number(),
+  overallRiskLevel: zod.number(),
+  overallRiskLabel: zod.string(),
+  totalDistanceKm: zod.number(),
+  segmentCount: zod.number(),
+  weatherCondition: zod.string(),
+  hour: zod.number(),
+  weatherInfo: zod
+    .object({
+      condition: zod.string(),
+      temperatureCelsius: zod.number(),
+      humidity: zod.number(),
+      windSpeedKmh: zod.number(),
+      precipitationMm: zod.number(),
+      description: zod.string(),
+    })
+    .optional(),
+});
+
+/**
+ * Streams AI-powered safety recommendations based on route risk analysis
+ * @summary Get AI safety recommendations for a route (SSE)
+ */
+export const getRecommendationsBodySegmentsItemRiskLevelMin = 0;
+export const getRecommendationsBodySegmentsItemRiskLevelMax = 3;
+
+export const GetRecommendationsBody = zod.object({
+  segments: zod.array(
+    zod.object({
+      segmentIndex: zod.number(),
+      startLat: zod.number(),
+      startLng: zod.number(),
+      endLat: zod.number(),
+      endLng: zod.number(),
+      distanceKm: zod.number(),
+      riskLevel: zod
+        .number()
+        .min(getRecommendationsBodySegmentsItemRiskLevelMin)
+        .max(getRecommendationsBodySegmentsItemRiskLevelMax),
+      riskLabel: zod.string(),
+      riskProbabilities: zod.array(zod.number()),
+      riskScore: zod.number(),
+    }),
+  ),
+  overallRiskScore: zod.number(),
+  overallRiskLabel: zod.string(),
+  weatherInfo: zod
+    .object({
+      condition: zod.string(),
+      temperatureCelsius: zod.number(),
+      humidity: zod.number(),
+      windSpeedKmh: zod.number(),
+      precipitationMm: zod.number(),
+      description: zod.string(),
+    })
+    .optional(),
+  totalDistanceKm: zod.number(),
+  hour: zod.number(),
+  fromCity: zod.string().optional(),
+  toCity: zod.string().optional(),
+});

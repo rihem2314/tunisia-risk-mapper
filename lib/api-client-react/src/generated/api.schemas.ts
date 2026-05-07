@@ -8,3 +8,105 @@
 export interface HealthStatus {
   status: string;
 }
+
+export interface ErrorResponse {
+  error: string;
+}
+
+export interface City {
+  name: string;
+  lat: number;
+  lng: number;
+  governorate: string;
+}
+
+export interface CitiesResponse {
+  cities: City[];
+}
+
+export interface WeatherInfo {
+  condition: string;
+  temperatureCelsius: number;
+  humidity: number;
+  windSpeedKmh: number;
+  precipitationMm: number;
+  description: string;
+}
+
+export interface RouteWaypoint {
+  lat: number;
+  lng: number;
+}
+
+export interface PredictRouteInput {
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  totalDistanceKm: number;
+  stepKm?: number;
+  /**
+   * @minimum 0
+   * @maximum 23
+   */
+  hour?: number;
+  hasJunction?: boolean;
+  hasCrossing?: boolean;
+  hasTrafficSignal?: boolean;
+  hasRoundabout?: boolean;
+  fromCity?: string;
+  toCity?: string;
+  /** Actual road waypoints from routing engine for accurate segmentation */
+  routeWaypoints?: RouteWaypoint[];
+}
+
+export interface RouteSegment {
+  segmentIndex: number;
+  startLat: number;
+  startLng: number;
+  endLat: number;
+  endLng: number;
+  distanceKm: number;
+  /**
+   * @minimum 0
+   * @maximum 3
+   */
+  riskLevel: number;
+  riskLabel: string;
+  riskProbabilities: number[];
+  riskScore: number;
+}
+
+export interface PredictRouteResult {
+  segments: RouteSegment[];
+  overallRiskScore: number;
+  overallRiskLevel: number;
+  overallRiskLabel: string;
+  totalDistanceKm: number;
+  segmentCount: number;
+  weatherCondition: string;
+  hour: number;
+  weatherInfo?: WeatherInfo;
+}
+
+export interface RecommendInput {
+  segments: RouteSegment[];
+  overallRiskScore: number;
+  overallRiskLabel: string;
+  weatherInfo?: WeatherInfo;
+  totalDistanceKm: number;
+  hour: number;
+  fromCity?: string;
+  toCity?: string;
+}
+
+export type GetWeatherParams = {
+  /**
+   * Latitude
+   */
+  lat: number;
+  /**
+   * Longitude
+   */
+  lng: number;
+};

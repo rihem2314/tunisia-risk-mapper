@@ -5,18 +5,30 @@
  * API specification
  * OpenAPI spec version: 0.1.0
  */
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import type {
+  MutationFunction,
   QueryFunction,
   QueryKey,
+  UseMutationOptions,
+  UseMutationResult,
   UseQueryOptions,
   UseQueryResult,
 } from "@tanstack/react-query";
 
-import type { HealthStatus } from "./api.schemas";
+import type {
+  CitiesResponse,
+  ErrorResponse,
+  GetWeatherParams,
+  HealthStatus,
+  PredictRouteInput,
+  PredictRouteResult,
+  RecommendInput,
+  WeatherInfo,
+} from "./api.schemas";
 
 import { customFetch } from "../custom-fetch";
-import type { ErrorType } from "../custom-fetch";
+import type { ErrorType, BodyType } from "../custom-fetch";
 
 type AwaitedInput<T> = PromiseLike<T> | T;
 
@@ -99,3 +111,340 @@ export function useHealthCheck<
 
   return { ...query, queryKey: queryOptions.queryKey };
 }
+
+/**
+ * Returns a list of major Tunisian cities with coordinates
+ * @summary Get list of Tunisian cities
+ */
+export const getGetCitiesUrl = () => {
+  return `/api/cities`;
+};
+
+export const getCities = async (
+  options?: RequestInit,
+): Promise<CitiesResponse> => {
+  return customFetch<CitiesResponse>(getGetCitiesUrl(), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetCitiesQueryKey = () => {
+  return [`/api/cities`] as const;
+};
+
+export const getGetCitiesQueryOptions = <
+  TData = Awaited<ReturnType<typeof getCities>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getCities>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetCitiesQueryKey();
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getCities>>> = ({
+    signal,
+  }) => getCities({ signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getCities>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetCitiesQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getCities>>
+>;
+export type GetCitiesQueryError = ErrorType<unknown>;
+
+/**
+ * @summary Get list of Tunisian cities
+ */
+
+export function useGetCities<
+  TData = Awaited<ReturnType<typeof getCities>>,
+  TError = ErrorType<unknown>,
+>(options?: {
+  query?: UseQueryOptions<Awaited<ReturnType<typeof getCities>>, TError, TData>;
+  request?: SecondParameter<typeof customFetch>;
+}): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetCitiesQueryOptions(options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Fetches current weather from Open-Meteo for given coordinates
+ * @summary Get real-time weather at a location
+ */
+export const getGetWeatherUrl = (params: GetWeatherParams) => {
+  const normalizedParams = new URLSearchParams();
+
+  Object.entries(params || {}).forEach(([key, value]) => {
+    if (value !== undefined) {
+      normalizedParams.append(key, value === null ? "null" : value.toString());
+    }
+  });
+
+  const stringifiedParams = normalizedParams.toString();
+
+  return stringifiedParams.length > 0
+    ? `/api/weather?${stringifiedParams}`
+    : `/api/weather`;
+};
+
+export const getWeather = async (
+  params: GetWeatherParams,
+  options?: RequestInit,
+): Promise<WeatherInfo> => {
+  return customFetch<WeatherInfo>(getGetWeatherUrl(params), {
+    ...options,
+    method: "GET",
+  });
+};
+
+export const getGetWeatherQueryKey = (params?: GetWeatherParams) => {
+  return [`/api/weather`, ...(params ? [params] : [])] as const;
+};
+
+export const getGetWeatherQueryOptions = <
+  TData = Awaited<ReturnType<typeof getWeather>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GetWeatherParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getWeather>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+) => {
+  const { query: queryOptions, request: requestOptions } = options ?? {};
+
+  const queryKey = queryOptions?.queryKey ?? getGetWeatherQueryKey(params);
+
+  const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeather>>> = ({
+    signal,
+  }) => getWeather(params, { signal, ...requestOptions });
+
+  return { queryKey, queryFn, ...queryOptions } as UseQueryOptions<
+    Awaited<ReturnType<typeof getWeather>>,
+    TError,
+    TData
+  > & { queryKey: QueryKey };
+};
+
+export type GetWeatherQueryResult = NonNullable<
+  Awaited<ReturnType<typeof getWeather>>
+>;
+export type GetWeatherQueryError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Get real-time weather at a location
+ */
+
+export function useGetWeather<
+  TData = Awaited<ReturnType<typeof getWeather>>,
+  TError = ErrorType<ErrorResponse>,
+>(
+  params: GetWeatherParams,
+  options?: {
+    query?: UseQueryOptions<
+      Awaited<ReturnType<typeof getWeather>>,
+      TError,
+      TData
+    >;
+    request?: SecondParameter<typeof customFetch>;
+  },
+): UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+  const queryOptions = getGetWeatherQueryOptions(params, options);
+
+  const query = useQuery(queryOptions) as UseQueryResult<TData, TError> & {
+    queryKey: QueryKey;
+  };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+/**
+ * Divides a route into segments, auto-fetches real-time weather, and predicts accident risk for each segment
+ * @summary Predict accident risk along a route
+ */
+export const getPredictRouteUrl = () => {
+  return `/api/predict`;
+};
+
+export const predictRoute = async (
+  predictRouteInput: PredictRouteInput,
+  options?: RequestInit,
+): Promise<PredictRouteResult> => {
+  return customFetch<PredictRouteResult>(getPredictRouteUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(predictRouteInput),
+  });
+};
+
+export const getPredictRouteMutationOptions = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof predictRoute>>,
+    TError,
+    { data: BodyType<PredictRouteInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof predictRoute>>,
+  TError,
+  { data: BodyType<PredictRouteInput> },
+  TContext
+> => {
+  const mutationKey = ["predictRoute"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof predictRoute>>,
+    { data: BodyType<PredictRouteInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return predictRoute(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type PredictRouteMutationResult = NonNullable<
+  Awaited<ReturnType<typeof predictRoute>>
+>;
+export type PredictRouteMutationBody = BodyType<PredictRouteInput>;
+export type PredictRouteMutationError = ErrorType<ErrorResponse>;
+
+/**
+ * @summary Predict accident risk along a route
+ */
+export const usePredictRoute = <
+  TError = ErrorType<ErrorResponse>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof predictRoute>>,
+    TError,
+    { data: BodyType<PredictRouteInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof predictRoute>>,
+  TError,
+  { data: BodyType<PredictRouteInput> },
+  TContext
+> => {
+  return useMutation(getPredictRouteMutationOptions(options));
+};
+
+/**
+ * Streams AI-powered safety recommendations based on route risk analysis
+ * @summary Get AI safety recommendations for a route (SSE)
+ */
+export const getGetRecommendationsUrl = () => {
+  return `/api/recommend`;
+};
+
+export const getRecommendations = async (
+  recommendInput: RecommendInput,
+  options?: RequestInit,
+): Promise<string> => {
+  return customFetch<string>(getGetRecommendationsUrl(), {
+    ...options,
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...options?.headers },
+    body: JSON.stringify(recommendInput),
+  });
+};
+
+export const getGetRecommendationsMutationOptions = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getRecommendations>>,
+    TError,
+    { data: BodyType<RecommendInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationOptions<
+  Awaited<ReturnType<typeof getRecommendations>>,
+  TError,
+  { data: BodyType<RecommendInput> },
+  TContext
+> => {
+  const mutationKey = ["getRecommendations"];
+  const { mutation: mutationOptions, request: requestOptions } = options
+    ? options.mutation &&
+      "mutationKey" in options.mutation &&
+      options.mutation.mutationKey
+      ? options
+      : { ...options, mutation: { ...options.mutation, mutationKey } }
+    : { mutation: { mutationKey }, request: undefined };
+
+  const mutationFn: MutationFunction<
+    Awaited<ReturnType<typeof getRecommendations>>,
+    { data: BodyType<RecommendInput> }
+  > = (props) => {
+    const { data } = props ?? {};
+
+    return getRecommendations(data, requestOptions);
+  };
+
+  return { mutationFn, ...mutationOptions };
+};
+
+export type GetRecommendationsMutationResult = NonNullable<
+  Awaited<ReturnType<typeof getRecommendations>>
+>;
+export type GetRecommendationsMutationBody = BodyType<RecommendInput>;
+export type GetRecommendationsMutationError = ErrorType<unknown>;
+
+/**
+ * @summary Get AI safety recommendations for a route (SSE)
+ */
+export const useGetRecommendations = <
+  TError = ErrorType<unknown>,
+  TContext = unknown,
+>(options?: {
+  mutation?: UseMutationOptions<
+    Awaited<ReturnType<typeof getRecommendations>>,
+    TError,
+    { data: BodyType<RecommendInput> },
+    TContext
+  >;
+  request?: SecondParameter<typeof customFetch>;
+}): UseMutationResult<
+  Awaited<ReturnType<typeof getRecommendations>>,
+  TError,
+  { data: BodyType<RecommendInput> },
+  TContext
+> => {
+  return useMutation(getGetRecommendationsMutationOptions(options));
+};
